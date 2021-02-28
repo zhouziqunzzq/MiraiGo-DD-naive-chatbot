@@ -16,6 +16,8 @@ from dateutil.parser import parse
 from jieba import posseg as pseg
 from gensim import corpora, models, similarities
 from naive_chatbot.data_preprocess import tokenization
+from naive_chatbot.predictor_pb2 import *
+from naive_chatbot.predictor_pb2_grpc import ChatPredictorServicer
 
 
 class NaivePredictor(object):
@@ -110,3 +112,21 @@ class NaivePredictor(object):
                 pred_rst.append((pred_msg, t_msg_sim))
 
         return pred_rst
+
+
+class NaivePredictorServicer(ChatPredictorServicer):
+    def __init__(self, predictor: NaivePredictor):
+        super(NaivePredictorServicer, self).__init__()
+        self.predictor = predictor
+
+    def PredictOne(self, request, context):
+        pred_rsts = self.predictor.predict_one(
+            request.msg, request.n_prediction,
+            request.time_offset_seconds, request.sim_cutoff,
+            verbose=True,
+        )
+        rsp = PredictReply()
+        for r in pred_rsts:
+            rsp_elem = rsp.result.add()
+            rsp_elem.msg, rsp_elem.sim = r
+        return rsp
