@@ -15,6 +15,7 @@ from typing import Dict, List, Tuple, Any
 from dateutil.parser import parse
 from jieba import posseg as pseg
 from gensim import corpora, models, similarities
+from naive_chatbot.data_preprocess import filter_raw_msg
 from naive_chatbot.data_preprocess import tokenization
 from naive_chatbot.predictor_pb2 import *
 from naive_chatbot.predictor_pb2_grpc import ChatPredictorServicer
@@ -63,6 +64,7 @@ class NaivePredictor(object):
             sim_cutoff: float = 0.0,
             verbose: bool = False
     ) -> List[Tuple[str, float]]:
+        msg = filter_raw_msg(msg)
         msg = zhconv.convert(msg, 'zh-cn')
         new_tokens = tokenization(msg)
         if verbose:

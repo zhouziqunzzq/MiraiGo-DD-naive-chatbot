@@ -16,6 +16,18 @@ from dateutil.parser import parse
 from jieba import posseg as pseg
 from gensim import corpora, models, similarities
 
+image_tag_pattern = re.compile(r'\[Image.*]')
+reply_tag_pattern = re.compile(r'\[Reply:[\d]+]')
+at_tag_pattern = re.compile(r'@[\w]+')
+url_pattern = re.compile(r'((http|https)://)?[a-zA-Z0-9./?:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9.&/?:@\-_=#])*')
+filter_patterns = [image_tag_pattern, reply_tag_pattern, at_tag_pattern, url_pattern]
+
+cmd_pattern = re.compile(r'^/.+')
+bili_notify_pattern = re.compile(r'您关注的[\w]+播啦')
+bili_danmu_pattern = re.compile(r'弹幕中继')
+new_member_greeting_pattern = re.compile(r'大家好，我是.+')
+ignore_patterns = [cmd_pattern, bili_notify_pattern, bili_danmu_pattern, new_member_greeting_pattern]
+
 
 def get_log_paths(base_path: str = './logs') -> List[str]:
     rst = []
@@ -28,14 +40,22 @@ def get_log_paths(base_path: str = './logs') -> List[str]:
     return rst
 
 
+def filter_raw_msg(msg: str) -> str:
+    for p in ignore_patterns:
+        if re.search(p, msg) is not None:
+            return ''
+
+    for p in filter_patterns:
+        msg = re.sub(p, '', msg)
+
+    msg = msg.strip()
+    return msg
+
+
 def process_one(
         log_file_path: str, filter_group_id: Optional[List[int]] = None
 ) -> Tuple[List[str], List[int]]:
     msgs, times = [], []
-
-    image_tag_pattern = re.compile(r'\[Image:[\w{}\-]+\.[\w{}\-]+]')
-    reply_tag_pattern = re.compile(r'\[Reply:[\d]+]')
-    at_tag_pattern = re.compile(r'@[\w]+')
 
     with open(log_file_path, 'r') as f:
         for line in f:
@@ -51,10 +71,7 @@ def process_one(
                 msg = log_line['msg']
                 time = int(parse(log_line['time']).timestamp())
                 # filter [Image], [Reply], @
-                msg = re.sub(image_tag_pattern, '', msg)
-                msg = re.sub(reply_tag_pattern, '', msg)
-                msg = re.sub(at_tag_pattern, '', msg)
-                msg = msg.strip()
+                msg = filter_raw_msg(msg)
                 if len(msg) == 0:
                     continue
                 # convert to zh-ch
@@ -105,6 +122,7 @@ def do_preprocess(
         lsi_save_path: str = 'lsi',
         sim_index_save_path: str = 'sim_index',
         filter_group_id: Optional[List[int]] = None,
+        debug: Optional[bool] = False,
 ):
     # get log file list
     log_file_paths = get_log_paths(logs_path)
@@ -118,6 +136,12 @@ def do_preprocess(
         pickle.dump(msgs, f)
     with open(times_save_path, 'wb') as f:
         pickle.dump(times, f)
+
+    if debug:
+        with open('raw_msgs.txt', 'w') as f:
+            for msg in msgs:
+                f.write(msg)
+                f.write('\n')
 
     # perform tokenization
     print('tokenizing...')
