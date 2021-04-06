@@ -28,6 +28,8 @@ bili_danmu_pattern = re.compile(r'弹幕中继')
 new_member_greeting_pattern = re.compile(r'大家好，我是.+')
 ignore_patterns = [cmd_pattern, bili_notify_pattern, bili_danmu_pattern, new_member_greeting_pattern]
 
+max_msg_len = 50
+
 
 def get_log_paths(base_path: str = './logs') -> List[str]:
     rst = []
@@ -72,7 +74,7 @@ def process_one(
                 time = int(parse(log_line['time']).timestamp())
                 # filter [Image], [Reply], @
                 msg = filter_raw_msg(msg)
-                if len(msg) == 0:
+                if len(msg) == 0 or len(msg) > max_msg_len:
                     continue
                 # convert to zh-ch
                 msg = zhconv.convert(msg, 'zh-cn')

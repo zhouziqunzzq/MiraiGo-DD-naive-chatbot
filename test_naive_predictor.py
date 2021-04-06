@@ -17,7 +17,7 @@ def test():
         sim_index_save_path='./model/sim_index',
     )
     pred_msgs = p.predict_one(
-        '好家伙', n_prediction=5, time_offset_seconds=300, sim_cutoff=0.0, verbose=True,
+        '好家伙', n_prediction=10, time_offset_seconds=300, sim_cutoff=0.5, verbose=True,
     )
     print(pred_msgs)
 
