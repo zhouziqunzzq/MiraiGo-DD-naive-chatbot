@@ -3,4 +3,5 @@
 logs/
 model/
 raw_msgs.txt
+logs.tar.gz
 model.tar.gz

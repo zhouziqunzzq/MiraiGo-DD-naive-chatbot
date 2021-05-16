@@ -26,7 +26,11 @@ cmd_pattern = re.compile(r'^/.+')
 bili_notify_pattern = re.compile(r'您关注的[\w]+播啦')
 bili_danmu_pattern = re.compile(r'弹幕中继')
 new_member_greeting_pattern = re.compile(r'大家好，我是.+')
-ignore_patterns = [cmd_pattern, bili_notify_pattern, bili_danmu_pattern, new_member_greeting_pattern]
+daily_fortune_pattern = re.compile(r'运势')
+ignore_patterns = [
+    cmd_pattern, bili_notify_pattern, bili_danmu_pattern, new_member_greeting_pattern,
+    daily_fortune_pattern,
+]
 
 max_msg_len = 50
 
@@ -55,7 +59,8 @@ def filter_raw_msg(msg: str) -> str:
 
 
 def process_one(
-        log_file_path: str, filter_group_id: Optional[List[int]] = None
+        log_file_path: str, filter_group_id: Optional[List[int]] = None,
+        ignore_sender_id: Optional[List[int]] = None,
 ) -> Tuple[List[str], List[int]]:
     msgs, times = [], []
 
@@ -66,6 +71,11 @@ def process_one(
             if filter_group_id is not None \
                     and 'GroupCode' in log_line \
                     and log_line['GroupCode'] not in filter_group_id:
+                continue
+            # ignore specific sender id
+            if ignore_sender_id is not None \
+                    and 'SenderID' in log_line \
+                    and log_line['SenderID'] in ignore_sender_id:
                 continue
             # filter out only group msg
             if 'module' in log_line and log_line['module'] == 'internal.logging' \
@@ -88,10 +98,11 @@ def process_one(
 def process_all(
         log_file_paths: List[str],
         filter_group_id: Optional[List[int]] = None,
+        ignore_sender_id: Optional[List[int]] = None,
 ) -> Tuple[List[str], List[int]]:
     msgs, times = [], []
     for p in log_file_paths:
-        m, t = process_one(p, filter_group_id)
+        m, t = process_one(p, filter_group_id, ignore_sender_id)
         msgs.extend(m)
         times.extend(t)
     return msgs, times
@@ -124,6 +135,7 @@ def do_preprocess(
         lsi_save_path: str = 'lsi',
         sim_index_save_path: str = 'sim_index',
         filter_group_id: Optional[List[int]] = None,
+        ignore_sender_id: Optional[List[int]] = None,
         debug: Optional[bool] = False,
 ):
     # get log file list
@@ -131,7 +143,7 @@ def do_preprocess(
     print(f'#log files: {len(log_file_paths)}')
 
     # read in all logs and get filtered msgs & times, save them to pickle file
-    msgs, times = process_all(log_file_paths, filter_group_id)
+    msgs, times = process_all(log_file_paths, filter_group_id, ignore_sender_id)
     assert len(msgs) == len(times)
     print(f'#filtered_msgs: {len(msgs)}')
     with open(msgs_save_path, 'wb') as f:

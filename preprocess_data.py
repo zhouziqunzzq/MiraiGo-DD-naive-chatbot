@@ -17,6 +17,7 @@ def main():
         lsi_save_path='./model/lsi',
         sim_index_save_path='./model/sim_index',
         filter_group_id=[825502693],
+        ignore_sender_id=[2705483895],
         debug=True,
     )
 
